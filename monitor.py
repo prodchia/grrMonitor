@@ -5,16 +5,24 @@ import time
 import datetime as dt
 
 
-def get_last_line(file_path):
+def get_last_lines(file_path, num_lines=5):
     with open(file_path, 'rb') as file:
         file.seek(-2, 2)  # Seek to the second-to-last character
 
-        while file.read(1) != b'\n':  # Iterate until finding the last newline character
-            file.seek(-2, 1)  # Seek back by 2 characters
+        lines = []
+        line_count = 0
 
-        last_line = file.readline().decode().strip()  # Read and decode the last line
+        while line_count < num_lines:
+            while file.read(1) != b'\n':  # Iterate until finding a newline character
+                file.seek(-2, 1)  # Seek back by 2 characters
 
-    return last_line
+            lines.append(file.readline().decode().strip())  # Read and decode the line
+            line_count += 1
+
+            if file.tell() <= 1:  # Break the loop if reached the beginning of the file
+                break
+
+    return lines[::-1]
 
 def monitor():
     # monitors GRResult error
@@ -26,7 +34,7 @@ def monitor():
 
     # Continuously monitor the file for changes
     while True:
-        line = get_last_line(debug_file_path)
+        line = get_last_lines(debug_file_path)
         print(f'{dt.datetime.now()} : Monitoring for GRR Error')
 
         if 'GRResult'  in line:
