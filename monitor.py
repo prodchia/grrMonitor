@@ -1,30 +1,26 @@
 import os
+import re
 import getpass
 import subprocess
 import time
 import datetime as dt
+import click
 
 
-def get_last_lines(file_path, num_lines=5):
-    with open(file_path, 'rb') as file:
-        file.seek(-2, 2)  # Seek to the second-to-last character
+def read_file(file_path):
+    lines = []
+    with open(file_path, 'r') as file:
+        for line in file:
+            match = re.search(r'GRResult', line)
+            if match:
+                lines.append(line)
 
-        lines = []
-        line_count = 0
+    return lines
 
-        while line_count < num_lines:
-            while file.read(1) != b'\n':  # Iterate until finding a newline character
-                file.seek(-2, 1)  # Seek back by 2 characters
 
-            lines.append(file.readline().decode().strip())  # Read and decode the line
-            line_count += 1
 
-            if file.tell() <= 1:  # Break the loop if reached the beginning of the file
-                break
+def monitor(monitor_freq = 30):
 
-    return lines[::-1]
-
-def monitor():
     # monitors GRResult error
     user = getpass.getuser()
     debug_file_path = f"C:\\Users\\{user}\\.chia\\mainnet\\log\\debug.log"
@@ -33,26 +29,42 @@ def monitor():
 
 
     # Continuously monitor the file for changes
+    print(f"Starting GRR error monitor at {dt.datetime.now()}. Checking every {monitor_freq} seconds")
     while True:
-        line = get_last_lines(debug_file_path)
-        print(f'{dt.datetime.now()} : Monitoring for GRR Error')
+        line = read_file(debug_file_path)
 
-        if 'GRResult'  in line:
-            print(f'{dt.datetime.now()} : GRR Error found. Restarting harvester')
-            command = cli_location + '\\chia start harvester -r'
-            print(command)
+        if len(line) > 0:
+            date_str = re.match(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', line[-1]).group()
+            error_time = dt.datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S')
 
-            result = subprocess.run(command, shell=True, capture_output=True, text=True)
+            time_elapsed = (dt.datetime.now() - error_time).total_seconds()
 
-            # Access the output and return code
-            output = result.stdout
-            error = result.stderr
-            return_code = result.returncode
+            if time_elapsed < 1.8*monitor_freq:
+                print(f'{dt.datetime.now()} : GRR Error found. Restarting harvester')
+                print(line[-1])
+                command = cli_location + '\\chia start harvester -r'
 
-            print(f"{output} \n {error} \n {return_code}")
+                result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
-        time.sleep(30)
+                # Access the output and return code
+                output = result.stdout
+                error = result.stderr
+                return_code = result.returncode
 
+                print(f"{output} \n {error} \n {return_code}")
+
+        time.sleep(monitor_freq)
+
+@click.command()
+@click.option('--freq',
+              required = False,
+              type=int,
+              default=30,
+              show_default=True)
+
+def main(freq):
+    monitor(monitor_freq=freq)
 
 if __name__ == "__main__":
-    monitor()
+    main()
+
