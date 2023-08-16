@@ -24,9 +24,18 @@ def monitor(monitor_freq = 30):
     # monitors GRResult error
     user = getpass.getuser()
     debug_file_path = f"C:\\Users\\{user}\\.chia\\mainnet\\log\\debug.log"
-    chia_location = f'C:\\Users\\{user}\\AppData\\Local\\Programs\\Chia\\'
-    cli_location = os.path.join(chia_location, 'resources\\app.asar.unpacked\\daemon')
+    chia_location1 = f'C:\\Users\\{user}\\AppData\\Local\\Programs\\Chia\\'
+    chia_location2 = f'C:\\Program Files\\Chia\\'
 
+
+    if os.path.exists(chia_location1):
+        chia_location = chia_location1
+    elif os.path.exists(chia_location2):
+        chia_location = chia_location2
+    else:
+        raise ValueError('Cannot find chia installed on this system')
+
+    cli_location = os.path.join(chia_location, 'resources\\app.asar.unpacked\\daemon')
 
     # Continuously monitor the file for changes
     print(f"Starting GRR error monitor at {dt.datetime.now()}. Checking every {monitor_freq} seconds")
