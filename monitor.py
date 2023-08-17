@@ -24,21 +24,25 @@ def monitor(monitor_freq = 30):
     # monitors GRResult error
     user = getpass.getuser()
     debug_file_path = f"C:\\Users\\{user}\\.chia\\mainnet\\log\\debug.log"
-    chia_location1 = f'C:\\Users\\{user}\\AppData\\Local\\Programs\\Chia\\'
-    chia_location2 = f'C:\\Program Files\\Chia\\'
+    chia_location1 = fr"C:\Users\{user}\AppData\Local\Programs\Chia\resources\app.asar.unpacked\daemon"
+    chia_location2 = r'"C:\Program Files\Chia\resources\app.asar.unpacked\daemon"'
 
 
     if os.path.exists(chia_location1):
-        chia_location = chia_location1
+        command = chia_location1 + '\\chia start harvester -r'
     elif os.path.exists(chia_location2):
-        chia_location = chia_location2
+        command = '"C:\\Program Files\\Chia\\resources\\app.asar.unpacked\\daemon\\chia" start harvester -r'
     else:
         raise ValueError('Cannot find chia installed on this system')
 
-    cli_location = os.path.join(chia_location, 'resources\\app.asar.unpacked\\daemon')
+
+
+
 
     # Continuously monitor the file for changes
     print(f"Starting GRR error monitor at {dt.datetime.now()}. Checking every {monitor_freq} seconds")
+
+
     while True:
         line = read_file(debug_file_path)
 
@@ -51,9 +55,8 @@ def monitor(monitor_freq = 30):
             if time_elapsed < 1.8*monitor_freq:
                 print(f'{dt.datetime.now()} : GRR Error found. Restarting harvester')
                 print(line[-1])
-                command = cli_location + '\\chia start harvester -r'
 
-                result = subprocess.run(command, shell=True, capture_output=True, text=True)
+                result = subprocess.run( command , shell=True, capture_output=True, text=True)
 
                 # Access the output and return code
                 output = result.stdout
